@@ -150,9 +150,9 @@ function App() {
       <h2 className="text-center text-[25px] text-white mt-5">
         Chỉnh sửa template
       </h2>
-      <div className="flex justify-around items-start">
+      <div className="">
         <div className="flex justify-center flex-col items-center ">
-          <div className="w-full ml-[10%]">
+          <div className="">
             <button
               type="button"
               className="bg-[#d280ff] text-white rounded-md mt-5 mb-5 px-[15px] py-[5px]"
@@ -201,7 +201,7 @@ function App() {
               Thêm mới trường thông tin
             </button>
           </div>
-          <div className="ml-[10%] w-full">
+          <div className="">
             <p className="text-white">
               *Lưu ý: Tên trường phải trùng khớp với tên cột trong file excel
             </p>
@@ -210,7 +210,7 @@ function App() {
           {listField.map((field, idx) => (
             <div
               key={idx + field.fontFamily}
-              className="flex w-full ml-[10%] mt-[1%] gap-[2rem] items-center justify-around border-dotted border-[#d280ff] border-2 p-3"
+              className="flex mt-[1%] gap-[2rem] items-center justify-around border-dotted border-[#d280ff] border-2 p-3"
             >
               <div>
                 <label
@@ -309,8 +309,8 @@ function App() {
             </div>
           ))}
         </div>
-        <div className="">
-          <div className="flex w-full ml-[10%] mt-[3%] gap-[2rem] items-center">
+        <div className="p-10 rounded-md flex flex-col items-center">
+          <div className="flex mt-[3%] gap-[2rem] items-center">
             <label
               className="font-[700] text-[20px] block text-sm text-white"
               htmlFor="file_input"
