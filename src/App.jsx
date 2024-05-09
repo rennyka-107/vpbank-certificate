@@ -8,6 +8,7 @@ import {
   Label,
   Rect,
   Transformer,
+  Line
 } from "react-konva";
 import { saveAs } from "file-saver";
 import { read, utils } from "xlsx";
@@ -51,14 +52,18 @@ const URLImage = ({ src, setImageSize }) => {
 
 function App() {
   const [file, setFile] = useState("");
-  const [text, setText] = useState("");
-  const [rerender, setRerender] = useState(false);
+  // const [text, setText] = useState("");
+  // const [rerender, setRerender] = useState(false);
   const canvasRef = useRef();
   const listCanvasRef = useRef({ refList: [] });
   const textRef = useRef();
   const [__html, setHTML] = useState("");
   const [listCertificate, setListCertificate] = useState([]);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [showPopup, setShowPopup] = useState(false);
+  const [showLine, setShowLine] = useState(false);
+  const [selectedField, setSelectedField] = useState();
   const [listField, setListField] = useState([
     {
       id: uuidv4(),
@@ -68,6 +73,8 @@ function App() {
       fieldName: "Name",
       defaultValue: "Tên học viên",
       elseAttr: null,
+      x: 10,
+      y: 10,
     },
   ]);
   const fontOptions = [
@@ -143,7 +150,25 @@ function App() {
     }
   }
 
-  console.log(listField, "lst field");
+  const handleMouseMove = (e) => {
+    const canvas = canvasRef.current;
+    const stage = canvas.getStage();
+    const scale = stage.scaleX(); // Lấy tỷ lệ thu phóng của canvas
+    const offsetX = stage.x(); // Lấy vị trí offsetX của canvas
+    const offsetY = stage.y(); // Lấy vị trí offsetY của canvas
+
+    const x = (e.nativeEvent.offsetX - offsetX) / scale; // Tính toán tọa độ X
+    const y = (e.nativeEvent.offsetY - offsetY) / scale; // Tính toán tọa độ Y
+
+    setMousePosition({ x, y });
+    setShowPopup(true);
+    setShowLine(true);
+  };
+
+  const handleMouseLeave = () => {
+    setShowPopup(false);
+    setShowLine(false);
+  };
 
   return (
     <div className="">
@@ -209,8 +234,9 @@ function App() {
 
           {listField.map((field, idx) => (
             <div
+              onClick={() => setSelectedField(field.id)}
               key={idx + field.fontFamily}
-              className="flex mt-[1%] gap-[2rem] items-center justify-around border-dotted border-[#d280ff] border-2 p-3"
+              className={`${field.id === selectedField ? 'bg-[#d280ff]' : ''} flex mt-[1%] gap-[2rem] items-center justify-around border-dotted border-[#d280ff] border-2 p-3`}
             >
               <div>
                 <label
@@ -324,7 +350,23 @@ function App() {
               type="file"
             />
           </div>
-          <div className="flex mt-5 bg-white">
+          <div
+            className="flex mt-5 bg-white"
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+          >
+            {showPopup && (
+              <div
+                className="popup"
+                style={{
+                  position: "fixed",
+                  left: mousePosition.x + 10,
+                  top: mousePosition.y + 10,
+                }}
+              >
+                <span>Tọa độ:</span> X: {mousePosition.x}, Y: {mousePosition.y}
+              </div>
+            )}
             <Stage
               ref={canvasRef}
               width={file ? imageSize.width : 700}
@@ -334,6 +376,32 @@ function App() {
                 {file ? (
                   <URLImage src={file} setImageSize={setImageSize} />
                 ) : null}
+                {showLine && (
+                  <>
+                    <Line
+                      points={[
+                        mousePosition.x,
+                        0,
+                        mousePosition.x,
+                        window.innerHeight,
+                      ]}
+                      stroke="black"
+                      strokeWidth={1}
+                      dash={[5, 5]}
+                    />
+                    <Line
+                      points={[
+                        0,
+                        mousePosition.y,
+                        window.innerWidth,
+                        mousePosition.y,
+                      ]}
+                      stroke="black"
+                      strokeWidth={1}
+                      dash={[5, 5]}
+                    />
+                  </>
+                )}
                 {listField.map((lf) => {
                   return (
                     <Text
