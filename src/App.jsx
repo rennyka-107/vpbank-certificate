@@ -4,15 +4,12 @@ import {
   Stage,
   Layer,
   Text,
-  Image,
-  Label,
-  Rect,
-  Transformer,
-  Line
+  Image
 } from "react-konva";
 import { saveAs } from "file-saver";
 import { read, utils } from "xlsx";
 import { v4 as uuidv4 } from "uuid";
+import Konva from "konva";
 
 const URLImage = ({ src, setImageSize }) => {
   const imageRef = useRef(null);
@@ -52,18 +49,13 @@ const URLImage = ({ src, setImageSize }) => {
 
 function App() {
   const [file, setFile] = useState("");
-  // const [text, setText] = useState("");
-  // const [rerender, setRerender] = useState(false);
   const canvasRef = useRef();
   const listCanvasRef = useRef({ refList: [] });
-  const textRef = useRef();
+  const listTextRef = useRef({ refList: [] });
   const [__html, setHTML] = useState("");
   const [listCertificate, setListCertificate] = useState([]);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [showPopup, setShowPopup] = useState(false);
-  const [showLine, setShowLine] = useState(false);
-  const [selectedField, setSelectedField] = useState();
+  const layerRef = useRef();
   const [listField, setListField] = useState([
     {
       id: uuidv4(),
@@ -75,6 +67,7 @@ function App() {
       elseAttr: null,
       x: 10,
       y: 10,
+      node: null,
     },
   ]);
   const fontOptions = [
@@ -141,7 +134,6 @@ function App() {
   function onSave() {
     if (listCanvasRef.current.refList.length > 0) {
       listCanvasRef.current.refList.forEach((it) => {
-        // console.log(canvas,"123")
         const dataUrl = it.node.toDataURL({
           pixelRatio: 2,
         });
@@ -150,25 +142,36 @@ function App() {
     }
   }
 
-  const handleMouseMove = (e) => {
-    const canvas = canvasRef.current;
-    const stage = canvas.getStage();
-    const scale = stage.scaleX(); // Lấy tỷ lệ thu phóng của canvas
-    const offsetX = stage.x(); // Lấy vị trí offsetX của canvas
-    const offsetY = stage.y(); // Lấy vị trí offsetY của canvas
-
-    const x = (e.nativeEvent.offsetX - offsetX) / scale; // Tính toán tọa độ X
-    const y = (e.nativeEvent.offsetY - offsetY) / scale; // Tính toán tọa độ Y
-
-    setMousePosition({ x, y });
-    setShowPopup(true);
-    setShowLine(true);
-  };
-
-  const handleMouseLeave = () => {
-    setShowPopup(false);
-    setShowLine(false);
-  };
+  useEffect(() => {
+    if (listTextRef.current.refList.length > 0) {
+      listTextRef.current.refList.forEach((field) => {
+        let MIN_WIDTH = 20;
+        var tr = new Konva.Transformer({
+          nodes: [field.node],
+          padding: 5,
+          flipEnabled: false,
+          enabledAnchors: ["middle-left", "middle-right"],
+          boundBoxFunc: (oldBox, newBox) => {
+            if (Math.abs(newBox.width) < MIN_WIDTH) {
+              return oldBox;
+            }
+            return newBox;
+          },
+        });
+        layerRef.current.add(tr);
+        field.node.on("transform", () => {
+          field.node.setAttrs({
+            width: Math.max(
+              field.node.width() * field.node.scaleX(),
+              MIN_WIDTH
+            ),
+            scaleX: 1,
+            scaleY: 1,
+          });
+        });
+      });
+    }
+  }, [listField]);
 
   return (
     <div className="">
@@ -234,9 +237,8 @@ function App() {
 
           {listField.map((field, idx) => (
             <div
-              onClick={() => setSelectedField(field.id)}
               key={idx + field.fontFamily}
-              className={`${field.id === selectedField ? 'bg-[#d280ff]' : ''} flex mt-[1%] gap-[2rem] items-center justify-around border-dotted border-[#d280ff] border-2 p-3`}
+              className="flex mt-[1%] gap-[2rem] items-center justify-around border-dotted border-[#d280ff] border-2 p-3"
             >
               <div>
                 <label
@@ -350,33 +352,17 @@ function App() {
               type="file"
             />
           </div>
-          <div
-            className="flex mt-5 bg-white"
-            onMouseMove={handleMouseMove}
-            onMouseLeave={handleMouseLeave}
-          >
-            {showPopup && (
-              <div
-                className="popup"
-                style={{
-                  position: "fixed",
-                  left: mousePosition.x + 10,
-                  top: mousePosition.y + 10,
-                }}
-              >
-                <span>Tọa độ:</span> X: {mousePosition.x}, Y: {mousePosition.y}
-              </div>
-            )}
+          <div className="flex mt-5 bg-white">
             <Stage
               ref={canvasRef}
               width={file ? imageSize.width : 700}
               height={file ? imageSize.height : 500}
             >
-              <Layer>
+              <Layer ref={layerRef}>
                 {file ? (
                   <URLImage src={file} setImageSize={setImageSize} />
                 ) : null}
-                {showLine && (
+                {/* {showLine && (
                   <>
                     <Line
                       points={[
@@ -401,11 +387,22 @@ function App() {
                       dash={[5, 5]}
                     />
                   </>
-                )}
+                )} */}
                 {listField.map((lf) => {
                   return (
                     <Text
-                      ref={textRef}
+                      ref={(node) => {
+                        const findIndex = listTextRef.current.refList.findIndex(
+                          (item) => item.id === lf.id
+                        );
+                        if (findIndex >= 0) {
+                          listTextRef.current.refList.splice(findIndex, 1);
+                        }
+                        listTextRef.current.refList.push({
+                          node,
+                          id: lf.id,
+                        });
+                      }}
                       id={lf.id}
                       key={lf.id}
                       onDragEnd={(e) => {
@@ -464,7 +461,6 @@ function App() {
                   dataJson.map((dt) => {
                     const obj = {};
                     listField.forEach((field) => {
-                      console.log(field.fieldName, "123", dt, obj);
                       obj[field.fieldName] = dt[field.fieldName];
                     });
                     return obj;
